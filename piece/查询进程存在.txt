@@ -1,0 +1,17 @@
+# 查询以/usr/bin/java开头的进程存在
+`ps -aux|awk '{printf $2" ";for(i=11;i<=NF;i++) printf " "$i;print "\n"}'|awk '{if ( $2 ~ /^\/usr\/bin\/java/ ) print $0 ; }'|awk 'END{print NR}'` -eq 1
+
+
+`ps -aux|grep java|awk 'END{print NR}'` == '2'
+
+
+
+psStr="java"
+if [[ `ps -aux|grep $psStr|awk 'END{print NR}'` == '2' ]]; then 
+    echo 1;
+else
+    echo 2;
+fi
+
+
+
