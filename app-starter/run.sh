@@ -1,3 +1,5 @@
+#!/bin/bash
+
 jarpath=app.jar
 logpath=/var/app.log
 testurl=localhost:8080
