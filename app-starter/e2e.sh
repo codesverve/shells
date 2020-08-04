@@ -178,30 +178,30 @@ run() {
     [lL][oO][gG])
             # show log
         todayLogFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
-            if [ ! -f $todayLogFile ]; then
-                echo -e "\033[31mTODAY LOG NOT FOUND,YOU CAN READ THE LOGS OF THE PAST DAYS\033[0m"
-        echo "LOG DIR -> $LOG_DIR"
-        echo "GET LOG PATH BY DATE -> ./e2e.sh logpath 2019-06-01"
-        exit 0
+        if [ ! -f $todayLogFile ]; then
+            echo -e "\033[31mTODAY LOG NOT FOUND,YOU CAN READ THE LOGS OF THE PAST DAYS\033[0m"
+			echo "LOG DIR -> $LOG_DIR"
+			echo "GET LOG PATH BY DATE -> ./e2e.sh logpath 2019-06-01"
+			exit 0
         fi;
-            tail -f $todayLogFile
-            ;;
-        [lL][oO][gG][pP][aA][tT][hH])
-            # get log path
-            if [[ $param1 == "" ]]; then
-                logFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
-            else 
-                logFile=$LOG_DIR/"e2e."$param1".log"
-            fi
-        echo $logFile
-            ;;
-        #[pP][uU][lL][lL])
+        tail -f $todayLogFile
+        ;;
+    [lL][oO][gG][pP][aA][tT][hH])
+        # get log path
+        if [[ $param1 == "" ]]; then
+            logFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
+        else 
+            logFile=$LOG_DIR/"e2e."$param1".log"
+        fi
+		echo $logFile
+		;;
+    #[pP][uU][lL][lL])
         #    # git pull
         #    ;;
-        *)
-            # 未找到命令
-            echo -e "\033[31mCOMMAND \"$cmd\" NOT FOUND\033[0m"
-            exit 1
+    *)
+        # 未找到命令
+        echo -e "\033[31mCOMMAND \"$cmd\" NOT FOUND\033[0m"
+        exit 1
     esac
 }
 
