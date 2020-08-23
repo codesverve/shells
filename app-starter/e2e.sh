@@ -1,15 +1,23 @@
 #!/bin/bash
 
 # jar文件名称
-JAR_NAME=e2e-backend.jar
+JAR_NAME=e2e-h5-backend.jar
 # 后端上传文件目录
 UPLOAD_DIR=/opt/e2e/upload
 # 后端运行目录
-RUN_DIR=/opt/e2e/runtime/java
+RUN_DIR=/opt/e2e/runtime/h5/java
 # 后端备份目录
 BACKUP_DIR=/opt/e2e/backup/java
+# 后端备份文件名前缀
+BACKUP_PREFIX=e2e-h5-backend-
+# 后端备份文件名后缀
+BACKUP_SUFFIX=.jar
 # 日志文件目录
-LOG_DIR=/var/log/e2e
+LOG_DIR=/var/log/e2e/h5
+# JVM error
+JVM_ERROR_FILE=jvm.error
+
+JVM_DUMP_FILE=jvm.dump
 
 # 后端上传jar文件地址
 UPLOAD_FILE=$UPLOAD_DIR/$JAR_NAME
@@ -22,13 +30,13 @@ RUN_FILE=$RUN_DIR/$JAR_NAME
 PROFILE=prod
 
 # 启动命令增加"-Dspring.profiles.active=$PROFILE"参数的方式覆盖配置文件的值
-JAVA_OPT="-Dspring.profiles.active=$PROFILE -Dlogback.loghome=$LOG_DIR"
+JAVA_OPT="-Xms512m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:ErrorFile=$LOG_DIR/$JVM_ERROR_FILE -XX:HeapDumpPath=$LOG_DIR/$JVM_DUMP_FILE -Dspring.profiles.active=$PROFILE -Dlogback.loghome=$LOG_DIR"
 # JAVA_OPT=""
 
 START_CMD="java $JAVA_OPT -jar $RUN_FILE"
 
 # 用于检测启动完毕，端口正常启动的url
-ALIVE_DETECT_URL="http://localhost:8083/e2e/api/getUserInfo"
+ALIVE_DETECT_URL="http://localhost:8083/e2espeakerservice/h5/api/getUserInfo"
 
 
 
@@ -147,9 +155,9 @@ start(){
     fi;
 
     # 备份jar
-    local backfile="$BACKUP_DIR/e2e-backend-"`date "+%Y-%m-%d-%H-%M"`".jar"
+    local backfile="$BACKUP_DIR/$BACKUP_PREFIX"`date "+%Y-%m-%d-%H-%M"`$BACKUP_SUFFIX
     cp $RUN_FILE $backfile
-    
+ 
     if [[ $pids != "" ]]; then
         stop 
     fi;
@@ -175,33 +183,34 @@ run() {
             # restart
             start force
             ;;    
-    [lL][oO][gG])
+	[lL][oO][gG])
             # show log
-        todayLogFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
-        if [ ! -f $todayLogFile ]; then
-            echo -e "\033[31mTODAY LOG NOT FOUND,YOU CAN READ THE LOGS OF THE PAST DAYS\033[0m"
-			echo "LOG DIR -> $LOG_DIR"
-			echo "GET LOG PATH BY DATE -> ./e2e.sh logpath 2019-06-01"
-			exit 0
-        fi;
-        tail -f $todayLogFile
-        ;;
-    [lL][oO][gG][pP][aA][tT][hH])
-        # get log path
-        if [[ $param1 == "" ]]; then
-            logFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
-        else 
-            logFile=$LOG_DIR/"e2e."$param1".log"
-        fi
-		echo $logFile
-		;;
-    #[pP][uU][lL][lL])
+	    lastLogFile=$LOG_DIR/`ls $LOG_DIR|grep -E 'e2e\.[0-9]{4}-[0-9]{2}-[0-9]{2}.log'|tail -1`
+	    echo "TAIL LOG FILE --> $lastLogFile"
+            if [ ! -f $lastLogFile ]; then
+                echo -e "\033[31mTODAY LOG NOT FOUND,YOU CAN READ THE LOGS OF THE PAST DAYS\033[0m"
+		echo "LOG DIR -> $LOG_DIR"
+		echo "GET LOG PATH BY DATE -> ./e2e_h5.sh logpath 2020-06-01"
+		exit 0
+	    fi;
+            tail -f $lastLogFile
+            ;;
+        [lL][oO][gG][pP][aA][tT][hH])
+            # get log path
+            if [[ $param1 == "" ]]; then
+                logFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
+            else 
+                logFile=$LOG_DIR/"e2e."$param1".log"
+            fi
+	    echo $logFile
+            ;;
+        #[pP][uU][lL][lL])
         #    # git pull
         #    ;;
-    *)
-        # 未找到命令
-        echo -e "\033[31mCOMMAND \"$cmd\" NOT FOUND\033[0m"
-        exit 1
+        *)
+            # 未找到命令
+            echo -e "\033[31mCOMMAND \"$cmd\" NOT FOUND\033[0m"
+            exit 1
     esac
 }
 
