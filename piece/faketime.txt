@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+
+# install
+# unzip libfaketime.zip
+# cd libfaketime
+# make
+# make install
+
+# use faketime 指定设定为2021-01-01时间
+DATE_DIFF=$((($(date -d "2021-01-01 00:00:00" +%s) - $(date +%s)) / 86400 + 1))
+export LD_PRELOAD=/usr/local/lib/faketime/libfaketime.so.1 FAKETIME="+"$DATE_DIFF"d"
+nohup java -Dspring.profiles.active=uat -Dserver.port=8080  -jar /backend-0.0.1.jar > /backend-0.0.1.log &
