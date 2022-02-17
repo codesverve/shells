@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    // environment {
+    // }
+
+    tools {
+        maven "Maven-3.6.3"
+        nodejs "nodejs-12.22.8"
+    }
+
+    stages {
+        
+        stage('frontend checkout') {
+            steps {
+                dir("$WORKSPACE/前端仓库目录") {
+                    pwd()
+                    sh 'ls'
+                    sh 'echo '
+                    sh 'echo "pull frontend sourcecode"'
+                    sh 'echo'
+                    git branch: 'master', credentialsId: 'git ssh凭据ID（SSH Username with private key）', url: '前端git仓库地址'   
+                    sh 'git status'
+                    sh 'git branch'
+                }
+            }
+        }
+        
+        stage('frontend package') {
+            steps {
+                dir("$WORKSPACE/前端仓库目录") {
+                    sh 'pwd'
+                    sh 'ls'
+                    sh "set -ex"
+                    sh "echo "
+                    sh 'echo run build frontend'
+                    sh "npm install"
+                    sh "npm run build"
+                }
+            }
+        }
+        
+        stage('backend checkout') {
+            steps {
+                dir("$WORKSPACE/后端仓库目录") {
+                    sh 'pwd'
+                    sh 'ls'
+                    sh 'echo'
+                    sh 'echo "pull backend sourcecode"'
+                    script {
+                        def ex = fileExists "$WORKSPACE/后端仓库目录/src/main/resources/static"
+                        if (ex) {
+                            sh 'rm -rf src/main/resources/static/*'
+                        }
+                    }
+                    git branch: 'master', credentialsId: 'git ssh凭据ID（SSH Username with private key）', url: '后端git仓库地址'   
+                    sh 'git status'
+                    sh 'git branch'
+                }
+            }
+        }
+        
+        stage('frontend integration') {
+            steps {
+                dir("$WORKSPACE/后端仓库目录") {
+                    sh 'pwd'
+                    sh 'ls'
+                    sh 'rm -rf src/main/resources/static/*' 
+                    sh 'cp -rf $WORKSPACE/前端仓库目录/dist/* src/main/resources/static/'
+                }
+            }
+        }
+        
+        stage('backend package') {
+            steps {
+                dir("$WORKSPACE/后端仓库目录") {
+                    sh 'pwd'
+                    sh 'ls'
+                    sh "set -ex"
+                    sh 'echo '
+                    sh 'echo run build backend'
+                    sh 'mvn clean package'
+                }
+            }
+        }
+        
+        stage('archive'){
+            steps{
+                archiveArtifacts artifacts: "后端仓库目录/target/后端打包文件.jar", fingerprint: true
+            }
+        }
+        
+        stage('sending...restart') {
+            steps {
+                dir("$WORKSPACE/后端仓库目录") {
+                    script {
+                        // 使用 userName变量接收用户名，使用password变量接收密码
+                        withCredentials([usernamePassword(credentialsId: 'SSH登录凭据ID（Username with password）', passwordVariable: 'password', usernameVariable: 'userName')]) {
+                            def remote = [:]
+                            remote.name = "部署服务器名称（随意命名）"
+                            remote.host = "部署服务器地址"
+                            remote.port = 部署服务器SSH端口
+                            remote.allowAnyHosts = true
+                            remote.user = userName
+                            remote.password = password
+                            // 将打包文件SCP发送到部署服务器
+                            sshPut remote: remote, from: "target/后端打包文件.jar", into: '/opt/'
+                            // 调用部署服务器上的脚本，执行部署更新
+                            sshCommand remote: remote, command: '/opt/deploy.sh'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

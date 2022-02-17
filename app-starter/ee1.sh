@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # jar文件名称
-JAR_NAME=e2e-h5-backend.jar
+JAR_NAME=ee1-h5-backend.jar
 # 后端上传文件目录
-UPLOAD_DIR=/opt/e2e/upload
+UPLOAD_DIR=/opt/ee1/upload
 # 后端运行目录
-RUN_DIR=/opt/e2e/runtime/h5/java
+RUN_DIR=/opt/ee1/runtime/h5/java
 # 后端备份目录
-BACKUP_DIR=/opt/e2e/backup/java
+BACKUP_DIR=/opt/ee1/backup/java
 # 后端备份文件名前缀
-BACKUP_PREFIX=e2e-h5-backend-
+BACKUP_PREFIX=ee1-h5-backend-
 # 后端备份文件名后缀
 BACKUP_SUFFIX=.jar
 # 日志文件目录
-LOG_DIR=/var/log/e2e/h5
+LOG_DIR=/var/log/ee1/h5
 # JVM error
 JVM_ERROR_FILE=jvm.error
 
@@ -36,7 +36,7 @@ JAVA_OPT="-Xms512m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:ErrorFile=$L
 START_CMD="java $JAVA_OPT -jar $RUN_FILE"
 
 # 用于检测启动完毕，端口正常启动的url
-ALIVE_DETECT_URL="http://localhost:8083/e2espeakerservice/h5/api/getUserInfo"
+ALIVE_DETECT_URL="http://localhost:8083/ee1speakerservice/h5/api/getUserInfo"
 
 
 
@@ -185,12 +185,12 @@ run() {
             ;;    
 	[lL][oO][gG])
             # show log
-	    lastLogFile=$LOG_DIR/`ls $LOG_DIR|grep -E 'e2e\.[0-9]{4}-[0-9]{2}-[0-9]{2}.log'|tail -1`
+	    lastLogFile=$LOG_DIR/`ls $LOG_DIR|grep -E 'ee1\.[0-9]{4}-[0-9]{2}-[0-9]{2}.log'|tail -1`
 	    echo "TAIL LOG FILE --> $lastLogFile"
             if [ ! -f $lastLogFile ]; then
                 echo -e "\033[31mTODAY LOG NOT FOUND,YOU CAN READ THE LOGS OF THE PAST DAYS\033[0m"
 		echo "LOG DIR -> $LOG_DIR"
-		echo "GET LOG PATH BY DATE -> ./e2e_h5.sh logpath 2020-06-01"
+		echo "GET LOG PATH BY DATE -> ./ee1_h5.sh logpath 2020-06-01"
 		exit 0
 	    fi;
             tail -f $lastLogFile
@@ -198,9 +198,9 @@ run() {
         [lL][oO][gG][pP][aA][tT][hH])
             # get log path
             if [[ $param1 == "" ]]; then
-                logFile=$LOG_DIR/"e2e."`date "+%Y-%m-%d"`".log"
+                logFile=$LOG_DIR/"ee1."`date "+%Y-%m-%d"`".log"
             else 
-                logFile=$LOG_DIR/"e2e."$param1".log"
+                logFile=$LOG_DIR/"ee1."$param1".log"
             fi
 	    echo $logFile
             ;;

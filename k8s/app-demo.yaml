@@ -1,0 +1,168 @@
+
+# app
+
+# 定义命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-name
+
+---
+
+# 定义发布的后端程序
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-name-ee1
+  namespace: app-name
+  # 程序labels，用于service等selector的匹配
+  labels:
+    app: app-name-ee1
+    tier: backend
+    environment: kube
+spec:
+  # 起1个pod，启动的每个pod都会有独立的ip地址
+  replicas: 1
+  # 根据selector匹配到的pod判断已经起了多少个pod
+  selector:
+    matchLabels:
+      app: app-name-ee1
+      tier: backend
+  # pod模版，如果已启动的pod不足${replicas}，将根据这个模版启动pod
+  template:
+    metadata:
+      # pod包含的lables标记
+      labels:
+        app: app-name-ee1
+        tier: backend
+        environment: kube
+    spec:
+      # 该pod包含的docker容器（可以有多个），基于docker容器特性，每个容器都会有独立的ip地址
+      containers:
+        - name: app-name-ee1
+          # 容器镜像
+          image: ikks-cloud/ee1:latest
+          # 镜像拉取策略：Always、IfNotPresent、Never
+          imagePullPolicy: IfNotPresent
+          # 启动容器时给容器额外添加的环境变量
+          env:
+            - name: PROFILE
+              value: "kube-test"
+            - name: IMAGE_NAME
+              value: "ikks-cloud/ee1"
+          # 容器暴露的端口
+          ports:
+            - containerPort: 9090    # 暴露的容器端口
+              protocol: TCP
+          # 如果command和args同时设置了，会执行：$command $args
+          # 如果只设置了command，会执行：$command
+          # 如果只设置了args，会执行：${dockerfile的命令} $args
+          command:
+#            - "exec /bin/bash"
+            - "./startup.sh"
+          args:
+            - --pause
+
+---
+
+# 将某类pod暴露为服务。k8s会自动给服务分配IP地址，对服务的访问将通过轮询自动转发到某个节点的pod上
+# 服务的ip地址只能k8s内部才能访问到
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app-name-ee1
+  name: app-name-ee1
+  namespace: app-name
+spec:
+  # 要从外部访问服务，需要设定type，目前有：NodePort 和 Ingress，某些云服务商提供的k8s服务可能会提供其他类型，比如：LoadBalancer   # type: NodePort需要指定具体端口，这时候k8s每个节点的物理主机上都会监听相应的端口
+  # 由于node有可能挂掉，实际架构时固定的方式转发流量到某个node并不保险，所以有些云服务商的k8s服务在此基础上会提供负载均衡服务，能自动发现node并把流量负载均衡到node上
+  # 如谷歌的：GCE，要完成这一步只需要将type: NodePort改为type: LoadBalancer （当然，得加钱）
+  # Ingress类型不在这里配置，它则需要再安装其他组件来支持（如：nginx/nginx-ingress），在安装了支持组件后，可通过 kind: Ingress 类型的发布来灵活调整转发流量的规则
+#  type: NodePort
+  # 服务暴露的端口定义
+  ports:
+      # service的端口，只能k8s内部访问
+    - port: 9090    # service端口
+      # 如果type是NodePort时必需，端口限制从30000起
+#      nodePort: 30001
+      # 指向容器的端口
+      targetPort: 9090    # 指向的容器端口
+  selector:
+    app: app-name-ee1
+    tier: backend
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-name-web
+  namespace: app-name
+  # 程序labels，用于service等selector的匹配
+  labels:
+    app: app-name-web
+    tier: frontend
+    environment: kube
+spec:
+  # 起1个pod，启动的每个pod都会有独立的ip地址
+  replicas: 1
+  # 根据selector匹配到的pod判断已经起了多少个pod
+  selector:
+    matchLabels:
+      app: app-name-web
+      tier: frontend
+  # pod模版，如果已启动的pod不足${replicas}，将根据这个模版启动pod
+  template:
+    metadata:
+      # pod包含的lables标记
+      labels:
+        app: app-name-web
+        tier: frontend
+        environment: kube
+    spec:
+      # 该pod包含的docker容器（可以有多个），基于docker容器特性，每个容器都会有独立的ip地址
+      containers:
+        - name: app-name-web
+          # 容器镜像
+          image: ikks-cloud/frontend-student:latest
+          # 镜像拉取策略：Always、IfNotPresent、Never
+          imagePullPolicy: IfNotPresent
+          # 启动容器时给容器额外添加的环境变量
+          env:
+            - name: IMAGE_NAME
+              value: "ikks-cloud/frontend-student"
+          # 容器暴露的端口
+          ports:
+            - containerPort: 80    # 暴露的容器端口 
+              protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app-name-web
+  name: app-name-web
+  namespace: app-name
+spec:
+  # 要从外部访问服务，需要设定type，目前有：NodePort 和 Ingress，某些云服务商提供的k8s服务可能会提供其他类型，比如：LoadBalancer   # type: NodePort需要指定具体端口，这时候k8s每个节点的物理主机上都会监听相应的端口
+  # 由于node有可能挂掉，实际架构时固定的方式转发流量到某个node并不保险，所以有些云服务商的k8s服务在此基础上会提供负载均衡服务，能自>动发现node并把流量负载均衡到node上
+  # 如谷歌的：GCE，要完成这一步只需要将type: NodePort改为type: LoadBalancer （当然，得加钱）
+  # Ingress类型不在这里配置，它则需要再安装其他组件来支持（如：nginx/nginx-ingress），在安装了支持组件后，可通过 kind: Ingress 类型>的发布来灵活调整转发流量的规则
+#  type: NodePort
+  # 服务暴露的端口定义
+  ports:
+      # service的端口，只能k8s内部访问
+    - port: 80    # service端口
+      # 如果type是NodePort时必需，端口限制从30000起
+#      nodePort: 30001
+      # 指向容器的端口
+      targetPort: 80    # 指向的容器端口
+  selector:
+    app: app-name-web
+    tier: frontend
