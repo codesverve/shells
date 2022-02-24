@@ -4,6 +4,10 @@ pipeline {
     // environment {
     // }
 
+    parameters {
+      choice choices: 'no\nyes', description: '您将发布到到生产环境，是否确认发布！！', name: 'IS_CONFIRM'
+    }
+
     tools {
         maven "Maven-3.6.3"
         nodejs "nodejs-12.22.8"
@@ -13,6 +17,14 @@ pipeline {
         
         stage('frontend checkout') {
             steps {
+		
+                script {
+                    if (params.IS_CONFIRM != 'yes') {
+                        currentBuild.result = 'ABORTED'
+                        error('Abort earlying...')
+                    }
+                }
+
                 dir("$WORKSPACE/前端仓库目录") {
                     pwd()
                     sh 'ls'
