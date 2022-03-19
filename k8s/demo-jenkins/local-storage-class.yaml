@@ -1,0 +1,8 @@
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: local-storage-class
+provisioner: kubernetes.io/no-provisioner
+# 非local类型时，会等待被申请后，才会实际在申请的node生成操作文件对象
+volumeBindingMode: WaitForFirstConsumer
