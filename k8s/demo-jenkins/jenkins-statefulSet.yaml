@@ -30,7 +30,7 @@ spec:
             - containerPort: 8080   
               #如果指定，这必须是 IANA SVC NAME 并且在 pod 中是唯一的。 pod 中的每个命名端口都必须具有唯一的名称。服务可以引用的端口的名称。
               name: tcp
-              # hostPort与hostIp相当于docker --net=host -p containerPort:hostIp:hostPort，跳过pod和service，直接将容器端口映射到宿主机
+              # hostPort与hostIp相当于docker --net=host -p hostIp:hostPort:containerPort，跳过pod和service，直接将容器端口映射到宿主机
               # 但会仅在容器所在node作该映射，大多数容器不需要这个
               #hostPort：
               #hostIP：   
