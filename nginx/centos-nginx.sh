@@ -19,4 +19,9 @@ make
 
 # make install
 
+# /usr/local/nginx/nginx -c /usr/local/nginx/nginx.conf
+# /usr/local/nginx/nginx -s stop
+# /usr/local/nginx/nginx -s reload
+# /usr/local/nginx/nginx -s restart
+
 
