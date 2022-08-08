@@ -1,0 +1,86 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infra-yearning
+
+
+
+---
+
+
+# 定义发布
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-yearning
+  namespace: infra-yearning
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yearning
+  template:
+    metadata:
+      labels:
+        app: yearning
+    spec:
+      containers:
+        - name: yearning
+          image: 10.10.1.1:11111/uetty/yearning:v3.0.1
+          # 镜像拉取策略
+          imagePullPolicy: IfNotPresent
+          ports:
+              #要在 pod 的 IP 地址上公开的端口数。这必须是一个有效的端口号，0 < x < 65536
+            - containerPort: 6666
+              #如果指定，这必须是 IANA SVC NAME 并且在 pod 中是唯一的。 pod 中的每个命名端口都必须具有唯一的名称。服务可以引用的端口的名称。
+              name: tcp
+              #hostPort：要在主机上公开的端口数。如果指定，这必须是一个有效的端口号，0 < x < 65536。如果指定了 HostNetwork，它必须与 ContainerPort 匹配。大多数容器不需要这个。
+              #hostIP：  绑定外部端口的主机 IP
+          # securityContext:
+            # runAsUser: 101
+          env:
+            - name: MYSQL_ADDR
+              value: 10.20.0.1:3306
+            - name: MYSQL_DB
+              value: yearn_db
+            - name: MYSQL_USER
+              value: yearn_user
+            - name: MYSQL_PASSWORD
+              value: user_password
+            - name: app.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+
+---
+
+# 对外暴露的service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-yearning
+  namespace: infra-yearning
+spec:
+  # 要从外部访问服务，需要设定type，目前有：NodePort 和 Ingress，某些云服务商提供的k8s服务可能会提供其他类型，比如：LoadBalancer   
+  # type: NodePort类型，需要指定具体端口，直接把服务暴露到宿主机的端口上，这时候k8s集群的每个节点(nodePort与port的区别，port只在本机器开端口)的物理主机上都会监听相应的端口
+  # 由于node有可能挂掉，实际架构时固定的方式转发流量到固定的node IP上并不保险，所以有些云服务商的k8s服务在此基础上会提供负载均衡服务，能自动发现有哪些node（IP），并把流量负载均衡到node上
+  # 如谷歌的：GCE，要完成这一步只需要将type: NodePort改为type: LoadBalancer （当然，得加钱）
+  # Ingress类型，在k8s中部署nginx等转发程序，不在这里配置，它则需要再安装其他组件来支持（如：nginx/nginx-ingress），在安装了支持组件后，可通过 kind: Ingress 类型的发布来灵活调整转发流量的规则
+  # 服务暴露的端口定义
+  type: NodePort
+  selector:
+    app: yearning
+  ports:
+    - name: yearning-web
+      protocol: TCP
+      # 指定pod上的其中一个containerPort端口
+      targetPort: 6666
+      # 进一步，将容器中暴露的containerPort(即本对象中的targetPort)端口，映射到serviceIp的端口上，使得通过serviceIp:port可以访问，但不能通过宿主机IP访问
+      port: 6666
+      # 将容器中暴露的containerPort（即本对象中的targetPort端口），在映射到宿主机nodeIp的端口上（端口范围限制在30000-32xxx，可配置中修改范围），使得通过nodeIp:nodePort可以访问
+      # nodePort方式暴露与hostPort方式暴露类型，但nodePort会在集群上所有结点上暴露，与servicePort一样均能从所有结点访问
+      nodePort: 30000
