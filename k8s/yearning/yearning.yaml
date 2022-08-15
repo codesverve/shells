@@ -36,7 +36,7 @@ spec:
             - containerPort: 6666
               #如果指定，这必须是 IANA SVC NAME 并且在 pod 中是唯一的。 pod 中的每个命名端口都必须具有唯一的名称。服务可以引用的端口的名称。
               name: tcp
-              #hostPort：要在主机上公开的端口数。如果指定，这必须是一个有效的端口号，0 < x < 65536。如果指定了 HostNetwork，它必须与 ContainerPort 匹配。大多数容器不需要这个。
+              #hostPort：要在主机上公开的端口数。如果指定，这必须是一个有效的端口号，0 < x < 65536。如果指定了 HostNetwork，它必须与 ContainerPort 匹配。大多数容器不需要这个，而且这样一个节点不能部署多个pod
               #hostIP：  绑定外部端口的主机 IP
           # securityContext:
             # runAsUser: 101

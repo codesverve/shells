@@ -1,0 +1,180 @@
+
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infra-es
+
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolume
+metadata: 
+  name: pv-es-1
+  namespace: infra-es
+  labels: 
+    app: es
+    role: master
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+  # 可读可写，可被多个node挂载
+  - ReadWriteMany
+  # PVC删除时的回收策略: 保留
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage-class
+  local:
+    path: /var/virtual-volumes/es-1
+  # 用于将local卷的pod调度到正确的位置
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        # 匹配结点标签值
+        # 可通过 kubectl label node nodeName labelName=labelValue 设置标签
+        # 可通过 kubectl get node --show-labels 查看标签
+        # 可通过 kubectl label node nodename labelName- 删除标签
+        - key: k8s.node.name
+          # 匹配方式：In Exists
+          operator: In
+          values: 
+          - master
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-es-2
+  namespace: infra-es
+  labels:
+    app: es
+    role: master
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+  # 可读可写，可被多个node挂载
+  - ReadWriteMany
+  # PVC删除时的回收策略: 保留
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage-class
+  local:
+    path: /var/virtual-volumes/es-2
+  # 用于将local卷的pod调度到正确的位置
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        # 匹配结点标签值
+        # 可通过 kubectl label node nodeName labelName=labelValue 设置标签
+        # 可通过 kubectl get node --show-labels 查看标签
+        # 可通过 kubectl label node nodename labelName- 删除标签
+        - key: k8s.node.name
+          # 匹配方式：In Exists
+          operator: In
+          values:
+          - master
+
+---
+# 集群方式配置文件
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: infra-es
+  name: es-cluster-config
+  labels:
+    app: es
+    role: master
+data:
+  elasticsearch.yml: |-
+    cluster.name: ${CLUSTER_NAME}
+    node.name: ${HOSTNAME}
+    path.data: /esdata
+    discovery.seed_hosts: ${NODE_LIST}
+    cluster.initial_master_nodes: ${MASTER_NODES}
+    network.host: 0.0.0.0
+    node:
+      # es节点的几个功能：用于协调的主节点，存储数据的节点，查询数据的节点，批量业务的节点（比如：定义一个pipeline，用于将所有提交数据的某个字段名map为新的名称，这样不用修改程序也可实现名称修改）
+      # 节点是否有成为主节点资格
+      master: true
+      # 节点是否存储数据
+      data: true
+      # 节点是否作为批量作业节点，充当批量作业的节点，需要较多的内存
+      ingest: true
+    xpack.security.enabled: true
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.transport.ssl.verification_mode: certificate
+    xpack.security.transport.ssl.keystore.path: /usr/share/elasticsearch/config/elastic-certificates.p12
+    xpack.security.transport.ssl.truststore.path: /usr/share/elasticsearch/config/elastic-certificates.p12
+    xpack.monitoring.collection.enabled: true
+
+---
+
+# 单点方式配置文件
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: infra-es
+  name: es-single-config
+  labels:
+    app: es
+    role: master
+data:
+  elasticsearch.yml: |-
+    cluster.name: ${CLUSTER_NAME}
+    node.name: ${HOSTNAME}
+    path.data: /esdata
+    # discovery.seed_hosts: ${NODE_LIST}
+    # cluster.initial_master_nodes: ${MASTER_NODES}
+    discovery.type: single-node
+    network.host: 0.0.0.0
+    node:
+      # es节点的几个功能：用于协调的主节点，存储数据的节点，查询数据的节点，批量业务的节点（比如：定义一个pipeline，用于将所有提交数据的某个字段>名map为新的名称，这样不用修改程序也可实现名称修改）
+      # 节点是否有成为主节点资格
+      master: true
+      # 节点是否存储数据
+      data: true
+      # 节点是否作为批量作业节点，充当批量作业的节点，需要较多的内存
+      ingest: true
+    xpack.security.enabled: true
+    xpack.monitoring.collection.enabled: true
+
+
+---
+
+# 对外暴露的service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-es
+  namespace: infra-es
+spec:
+  selector:
+    app: es
+  # 设置成无头的服务
+#  clusterIP: None
+  type: NodePort
+  ports:
+    - name: es-web
+      protocol: TCP
+      # service端口
+      port: 80
+      # 指向pod的端口
+      targetPort: 9200
+      # k8s方式公布端口在真机上，k8s每个节点都会有该端口路由
+      nodePort: 33672
+    - name: es-transport
+      protocol: TCP
+      port: 9300
+      targetPort: 9300
+
+
+

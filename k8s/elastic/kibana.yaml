@@ -1,0 +1,93 @@
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: infra-es
+  name: kibana-config
+  labels: 
+    app: kibana
+data:
+  kibana.yml: |-
+    server.host: 0.0.0.0
+
+    elasticsearch: 
+      hosts: ${ES_HOSTS}
+      username: ${ES_USER}
+      password: ${ES_PASSWORD}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: infra-es
+  name: kibana
+  labels:
+    app: kibana
+spec: 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:7.15.0
+        resources:
+          requests:
+            memory: 768Mi
+          limits:
+            memory: 768Mi
+        ports:
+        - containerPort: 5601  # 容器端口
+#          hostPort: 5601       # 直接公布在主机上的端口，即docker --net=host -p hostIp:hostPort:containerPort
+          name: web-port
+        env: 
+        - name: ES_HOSTS
+          value: "http://es-0.svc-es.infra-es.svc.cluster.local:9200"
+        - name: ES_USER
+          value: elastic
+        - name: ES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: es-pw-elastic
+              key: password
+        volumeMounts:
+        - name: kb-config
+          mountPath: /usr/share/kibana/config/kibana.yml
+          readOnly: true
+          subPath: kibana.yml
+      volumes:
+      - name: kb-config
+        configMap:
+          name: kibana-config
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: infra-es
+  name: svc-kibana
+  labels:
+    app: kibana
+spec:
+  type: NodePort
+  ports:
+  - name: kibana-web
+    protocol: TCP
+    # 指向pod的端口
+    targetPort: 5601
+    # service端口
+    port: 5601
+    # 宿主机的端口，好像得从30000起，可在kube-apiserver.yaml调整
+    nodePort: 33675
+  selector:
+    app: kibana
+
+

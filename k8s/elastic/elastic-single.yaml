@@ -1,0 +1,81 @@
+# 单点方式部署
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: es
+  namespace: infra-es
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: es
+      role: master
+  serviceName: svc-es
+  template:
+    metadata:
+      labels:
+        app: es
+        role: master
+    spec:
+      terminationGracePeriodSeconds: 10
+      subdomain: es
+      containers:
+        - name: es
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+          # 镜像拉取策略
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9300   # 暴露的容器端口
+              # hostPort: 9300        # 不通过k8s的方式，直接公布端口在真机上，但这样一个节点不能部署多个pod，并且也不是所有节点都有该端口
+              name: transport
+            - containerPort: 9200
+              # hostPort: 9200
+              name: client
+          securityContext:
+            runAsUser: 666
+          env: 
+            - name: ES_JAVA_OPTS
+              value: -Xms768m -Xmx768m
+            - name: APP_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # - name: NODE_LIST
+              # replicas几个，这里就用几个IP
+              # {hostname}.{service}.{namespace}.svc.cluster.local
+              # value: es-0.svc-es.infra-es.svc.cluster.local,es-1.svc-es.infra-es.svc.cluster.local
+              # - name: MASTER_NODES
+              # value: es-0,es-1
+            - name: CLUSTER_NAME
+              value: es
+          #args:
+          volumeMounts:
+            - name: pvc-es
+              mountPath: /esdata
+            - name: config
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+              readOnly: true
+              subPath: elasticsearch.yml
+      volumes:
+        - name: config
+          configMap:
+            name: es-single-config
+  volumeClaimTemplates:
+    - metadata:
+        name: pvc-es
+        namespace: infra-es
+      spec:
+        accessModes:
+          - ReadWriteMany
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: local-storage-class
+        selector:
+          matchLabels:
+            app: "es"
+#          matchExpressions:
+#            - {key: app, operator: In, values: [es]}
+
+
