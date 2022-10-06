@@ -21,7 +21,7 @@ spec:
       subdomain: es
       containers:
         - name: es
-          image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.17.6
           # 镜像拉取策略
           imagePullPolicy: IfNotPresent
           ports:
@@ -35,7 +35,7 @@ spec:
             runAsUser: 666
           env: 
             - name: ES_JAVA_OPTS
-              value: -Xms768m -Xmx768m
+              value: -Xms736m -Xmx736m
             - name: APP_NAME
               valueFrom:
                 fieldRef:
@@ -50,19 +50,36 @@ spec:
               value: es
           #args:
           volumeMounts:
-            - name: pvc-es
+            - name: pvc-es-single
               mountPath: /esdata
             - name: config
               mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
               readOnly: true
               subPath: elasticsearch.yml
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/elastic-certificates.p12
+              readOnly: true
+              subPath: elastic-certificates.p12
+            - name: certs
+              mountPath: /usr/share/elasticsearch/config/elastic-stack-ca.p12
+              readOnly: true
+              subPath: elastic-stack-ca.p12
+            - name: plugins-dir
+              mountPath: /usr/share/elasticsearch/plugins/
       volumes:
         - name: config
           configMap:
             name: es-single-config
+        - name: plugins-dir
+          nfs:
+            server: 172.20.1.57
+            path: /var/virtual-volumes/nfs-dir/elastic-plugins/
+        - name: certs
+          secret:
+            secretName: es-cert
   volumeClaimTemplates:
     - metadata:
-        name: pvc-es
+        name: pvc-es-single
         namespace: infra-es
       spec:
         accessModes:
@@ -75,7 +92,7 @@ spec:
         selector:
           matchLabels:
             app: "es"
-#          matchExpressions:
-#            - {key: app, operator: In, values: [es]}
+          matchExpressions:
+            - {key: type, operator: In, values: [single]}
 
 

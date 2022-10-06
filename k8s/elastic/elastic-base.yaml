@@ -16,6 +16,7 @@ metadata:
   labels: 
     app: es
     role: master
+    type: cluster
 spec:
   capacity:
     storage: 20Gi
@@ -53,6 +54,7 @@ metadata:
   labels:
     app: es
     role: master
+    type: cluster
 spec:
   capacity:
     storage: 20Gi
@@ -65,6 +67,44 @@ spec:
   storageClassName: local-storage-class
   local:
     path: /var/virtual-volumes/es-2
+  # 用于将local卷的pod调度到正确的位置
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        # 匹配结点标签值
+        # 可通过 kubectl label node nodeName labelName=labelValue 设置标签
+        # 可通过 kubectl get node --show-labels 查看标签
+        # 可通过 kubectl label node nodename labelName- 删除标签
+        - key: k8s.node.name
+          # 匹配方式：In Exists
+          operator: In
+          values:
+          - master
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-es-single
+  namespace: infra-es
+  labels:
+    app: es
+    role: master
+    type: single
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+  # 可读可写，可被多个node挂载
+  - ReadWriteMany
+  # PVC删除时的回收策略: 保留
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage-class
+  local:
+    path: /var/virtual-volumes/es-single
   # 用于将local卷的pod调度到正确的位置
   nodeAffinity:
     required:
@@ -130,7 +170,8 @@ data:
   elasticsearch.yml: |-
     cluster.name: ${CLUSTER_NAME}
     node.name: ${HOSTNAME}
-    path.data: /esdata
+    path:
+      data: /esdata
     # discovery.seed_hosts: ${NODE_LIST}
     # cluster.initial_master_nodes: ${MASTER_NODES}
     discovery.type: single-node
@@ -145,7 +186,9 @@ data:
       ingest: true
     xpack.security.enabled: true
     xpack.monitoring.collection.enabled: true
-
+    xpack.security.transport.ssl.verification_mode: certificate
+    xpack.security.transport.ssl.keystore.path: /usr/share/elasticsearch/config/elastic-certificates.p12
+    xpack.security.transport.ssl.truststore.path: /usr/share/elasticsearch/config/elastic-certificates.p12
 
 ---
 
