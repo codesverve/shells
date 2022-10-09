@@ -51,11 +51,14 @@ spec:
         - name: ES_HOSTS
           value: "http://es-0.svc-es.infra-es.svc.cluster.local:9200"
         - name: ES_USER
-          value: elastic
+          valueFrom:
+            secretKeyRef:
+              name: es-pw-kibana-system
+              key: username
         - name: ES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: es-pw-elastic
+              name: es-pw-kibana-system
               key: password
         volumeMounts:
         - name: kb-config

@@ -167,6 +167,7 @@ rm elasticsearch-analysis-ik-7.17.6.zip
 > mkdir /var/nfs/
 > vim /etc/exports
 > 添加如下配置
+>
 > ```
 > /var/nfs/ *(async,insecure,no_root_squash,no_subtree_check,rw)
 > ```
@@ -179,6 +180,7 @@ rm elasticsearch-analysis-ik-7.17.6.zip
 > /etc/init.d/nfs-kernel-server restart  # 重启nfs
 >
 > showmount -e    # 查看是否成功
+> mkdir /test/
 > mount -t nfs 127.0.0.1:/var/nfs/ /test/   # 本机测试是否成功
 > ls /test  # 文件夹内文件与/var/nfs下一致，则说明配置成功
 > amount /test  # 取消挂载
@@ -194,6 +196,61 @@ rm elasticsearch-analysis-ik-7.17.6.zip
 3. 使用`Filebeat`从多个服务器上收集日志，提交到`Logstash`，经过`Logstash`完成过滤及数据处理或格式转换后，提交到`Elasticsearch`，再由`Kibana`作为数据展示
 
 比较推荐方案2、3，由于`Logstash`性能开销大，安装到日志收集端较为浪费，`Filebeat`更为合适，选择方案2还是方案3根据是否需要数据处理的具体需求来决定。
+
+**Elasticesarch添加pipeline用于处理数据**
+
+log_data_pipeline
+
+```
+[
+  {
+    "grok": {
+      "field": "message",
+      "patterns": [
+        "%{TIMESTAMP_ISO8601:timestamp} %{SPACE}\\[%{DATA:reqId},%{DATA}\\] %{SPACE}%{LOGLEVEL:logLevel} %{SPACE}%{NOTSPACE:sourceClass} %{SPACE}\\[line\\:%{NUMBER:sourceLine}\\] %{SPACE}- %{SPACE}%{ANYTEXT:text}"
+      ],
+      "pattern_definitions": {
+        "ANYTEXT": "(.|\\n)*"
+      },
+      "ignore_missing": true,
+      "ignore_failure": true
+    }
+  },
+  {
+    "rename": {
+      "field": "@timestamp",
+      "target_field": "collect_time"
+    }
+  },
+  {
+    "date": {
+      "field": "timestamp",
+      "formats": [
+        "yyyy-MM-dd HH:mm:ss.SSS"
+      ],
+      "target_field": "@timestamp",
+      "timezone": "Asia/Shanghai"
+    }
+  }
+]
+```
+
+此pipeline，第1个grok处理器可从如下日志中
+
+```
+2022-10-09 18:27:52.269 [2a04eb7ba5ae4f8e9bd92f935159028e,http-nio-9211-exec-8] DEBUG org.springframework.web.servlet.DispatcherServlet [line:91] - "FORWARD" dispatch for GET "/index.html", parameters={}
+```
+
+提取数据，并新建如下字段
+
+> timestamp：2022-10-09 18:27:52.269
+> reqId：2a04eb7ba5ae4f8e9bd92f935159028e
+> logLevel：DEBUG
+> sourceClass：org.springframework.web.servlet.DispatcherServlet
+> sourceLine：91
+> text："FORWARD" dispatch for GET "/index.html", parameters={}
+
+第2、3个处理器将新采集的timestamp字段数据替换到@timestamp中，使日志时间排序正确
 
 **Filebeat安装**
 
@@ -213,7 +270,7 @@ rm elasticsearch-analysis-ik-7.17.6.zip
 > cp filebeat.yml filebeat-prod-log.yml
 > vim filebeat-prod-log.yml
 
-修改以下特定配置值
+修改以下特定配置值，设置采集目录，多行合并配置，数据处理pipeline以及提交目标index
 
 ```
 - type: log
@@ -221,20 +278,34 @@ rm elasticsearch-analysis-ik-7.17.6.zip
   enabled: true
   path:
     - /var/log/xxxx/*.log
+  # 多行合并
+  multiline:
+    # 正则匹配
+    type: pattern
+    # 匹配规则
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} \['
+    # 是否匹配反转
+    negate: true
+    # 被匹配的行是往上一行末尾添加还是往下一行前面添加
+    match: after
+  fields:
+    from: prod-end
 
 # 修改提交的index，不修改的情况下，默认提交到的index为filebeat-xxxx-xxx
 setup:
   ilm:
     enabled: false
   template:
-    name: "prod-log"
-    pattern: "prod-log-*"
+    name: "logs-prod"
+    pattern: "logs-prod-*-*"
 
 output.elasticsearch:
   hosts: ["192.168.1.2:9200"]
   username: "elastic"
   password: "passxxxx"
-  index: "prod-log-%{+yyyy.MM.dd}"
+  index: "logs-prod-app-%{+yyyy.MM.dd}"
+  pipeline: "log_data_pipeline"
+
 
 ```
 
