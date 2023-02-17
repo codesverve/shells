@@ -98,7 +98,7 @@ pipeline {
         
         stage('archive'){
             steps{
-                archiveArtifacts artifacts: "后端仓库目录/target/后端打包文件.jar", fingerprint: true
+                archiveArtifacts artifacts: "后端仓库目录/target/后端打包文件.jar（dir包裹下要使用相对路径）", fingerprint: true
             }
         }
         

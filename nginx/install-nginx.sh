@@ -7,8 +7,9 @@
 rm -rf nginx-1.21.6
 tar -xf nginx-1.21.6.tar.gz
 
-#yum -y install pcre-devel
-#yum -y install openssl openssl-devel
+# yum -y install pcre-devel
+# yum -y install openssl openssl-devel
+# yum -y install gcc gcc-c++ autoconf automake make
 
 apt -y install libpcre3 libpcre3-dev
 apt -y install libssl-dev

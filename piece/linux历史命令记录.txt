@@ -1,0 +1,4 @@
+USER=`whoami`
+USER_IP=`who -u am i 2>/dev/null| awk '{print $NF}'|sed -e 's/[()]//g'`
+DT=`date`
+echo "echo \"$DT $USER $USER_IP LOGIN\"" >> $HISTFILE
