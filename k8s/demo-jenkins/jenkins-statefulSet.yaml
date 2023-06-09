@@ -20,6 +20,16 @@ spec:
         app: jenkins
     spec:
       terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 998
+      volumes:
+        - name: docker-cli
+          hostPath:
+            path: /usr/bin/docker
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
       containers:
         - name: jenkins
           image: jenkins/jenkins:2.263.1-lts
@@ -27,18 +37,16 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
               # 暴露的容器端口，相当于 docker -p containerPort
-            - containerPort: 8080   
+            - containerPort: 8080
               #如果指定，这必须是 IANA SVC NAME 并且在 pod 中是唯一的。 pod 中的每个命名端口都必须具有唯一的名称。服务可以引用的端口的名称。
               name: tcp
-              # hostPort与hostIp相当于docker --net=host -p hostIp:hostPort:containerPort，跳过pod和service，直接将容器端口映射到宿主机
-              # 但会仅在容器所在node作该映射，大多数容器不需要这个，而且这样一个节点不能部署多个pod
+              # hostPort与hostIp相当于docker --net=host -p containerPort:hostIp:hostPort，跳过pod和service，直接将容器端口映射到宿主机
+              # 但会仅在容器所在node作该映射，大多数容器不需要这个
               #hostPort：
               #hostIP：   
-          # securityContext:
-            # runAsUser: 101
-          env: 
+          env:
             - name: JAVA_OPTS
-              value: -Xmx768m
+              value: "-Xmx768m -Dhudson.security.HudsonPrivateSecurityRealm.ID_REGEX=\"[a-zA-Z0-9_.@-]+\" -Duser.timezone=Asia/Shanghai"
             - name: app.name
               valueFrom:
                 fieldRef:
@@ -47,6 +55,24 @@ spec:
           volumeMounts:
             - name: pvc-jenkins
               mountPath: /var/jenkins_home
+            - name: docker-cli
+              mountPath: /usr/bin/docker
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+            - name: config-files
+              mountPath: /var/jenkins_home/.m2/settings.xml
+              readOnly: true
+              subPath: mvn-setting-file
+      volumes:
+        - name: config-files
+          secret:
+            secretName: jenkins-files
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+        - name: docker-cli
+          hostPath:
+            path: /usr/bin/docker
   volumeClaimTemplates:
     - metadata:
         name: pvc-jenkins
@@ -61,7 +87,7 @@ spec:
         storageClassName: local-storage-class
         selector:
           matchLabels:
-            app: "jenkins" 
+            app: "jenkins"
 #          matchExpressions:
 #            - {key: app, operator: In, values: [jenkins]}
          

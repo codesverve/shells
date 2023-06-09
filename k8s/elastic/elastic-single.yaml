@@ -50,33 +50,26 @@ spec:
               value: es
           #args:
           volumeMounts:
-            - name: pvc-es-single
-              mountPath: /esdata
-            - name: config
-              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+            - name: pvc-jenkins
+              mountPath: /var/jenkins_home
+            - name: docker-cli
+              mountPath: /usr/bin/docker
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+            - name: config-files
+              mountPath: /var/jenkins_home/.m2/settings.xml
               readOnly: true
-              subPath: elasticsearch.yml
-            - name: certs
-              mountPath: /usr/share/elasticsearch/config/elastic-certificates.p12
-              readOnly: true
-              subPath: elastic-certificates.p12
-            - name: certs
-              mountPath: /usr/share/elasticsearch/config/elastic-stack-ca.p12
-              readOnly: true
-              subPath: elastic-stack-ca.p12
-            - name: plugins-dir
-              mountPath: /usr/share/elasticsearch/plugins/
+              subPath: mvn-setting-file
       volumes:
-        - name: config
-          configMap:
-            name: es-single-config
-        - name: plugins-dir
-          nfs:
-            server: 172.20.1.57
-            path: /var/virtual-volumes/nfs-dir/elastic-plugins/
-        - name: certs
+        - name: config-files
           secret:
-            secretName: es-cert
+            secretName: jenkins-files
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+        - name: docker-cli
+          hostPath:
+            path: /usr/bin/docker
   volumeClaimTemplates:
     - metadata:
         name: pvc-es-single

@@ -39,7 +39,7 @@ filebeat.inputs:
     match: after
   fields:
     from: server-6-111
-    service: e2e
+    service: api
 - type: log
   id: app-gateway-test
   enabled: true
