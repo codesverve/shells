@@ -1,0 +1,15 @@
+[Unit]
+Description=Filebeat is a lightweight shipper for metrics.
+Documentation=https://www.elastic.co/products/beats/filebeat
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Environment="LOG_OPTS=-e"
+Environment="CONFIG_OPTS=-c /usr/local/filebeat-7.17.6/filebeat-app-test.yml"
+Environment="PATH_OPTS=-path.home /usr/local/filebeat-7.17.6 -path.config /usr/local/filebeat-7.17.6 -path.data /usr/local/filebeat-7.17.6/data-app-test -path.logs /usr/local/filebeat-7.17.6/logs-app-test"
+ExecStart=/usr/local/filebeat-7.17.6/filebeat $LOG_OPTS $CONFIG_OPTS $PATH_OPTS
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
