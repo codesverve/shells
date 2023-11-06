@@ -1,0 +1,88 @@
+
+load_module modules/ngx_http_cookie_flag_filter_module.so;
+
+
+stream {
+
+    upstream mysql {
+        hash $remote_addr consistent;
+        server 127.0.0.1:3306 weight=5 max_fails=3 fail_timeout=30s;
+    }
+
+    server {
+       listen 8806;
+       proxy_connect_timeout 30s;
+       proxy_timeout 600s;
+       proxy_pass mysql;
+    }
+}
+
+http {
+
+
+    server_tokens off;
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Server;
+
+    map $http_upgrade $connection_upgrade {
+        default         keep-alive;
+        'websocket'     upgrade;
+    }
+
+    upstream app {
+        server 127.0.0.1:8080;
+    }
+
+    # 频率限制
+    limit_req_zone $http_x_forwarded_for zone=apilimit:100m rate=200r/s;
+
+    # HTTPS server
+    #
+    server {
+        listen 443 ssl;
+        server_name xxx.xxx.com;
+        ssl_certificate /etc/letsencrypt/live/xxx.xxx.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/xxx.xxx.com/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        location ~ .*\.(js|css)$ {
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Real-IP $remote_addr;
+            set_cookie_flag * secure;
+            add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+
+            proxy_pass http://app;
+        }
+
+        error_page 403 404 /404.html;
+#        location = /404.html {
+#            root /usr/local/nginx/html/;
+#        }
+
+        location / {
+            # 频率限制
+            limit_req zone=apilimit burst=20 nodelay;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Real-IP $remote_addr;
+            set_cookie_flag * secure;
+            add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+
+            add_header Cache-Control no-cache;
+            proxy_hide_header Cache-Control;
+
+            if ($request_filename ~* ^.*?\.(?:html|htm)$)
+            {
+                add_header X-Frame-Options SAMEORIGIN;
+                add_header Cache-Control "private, no-store, no-cache, must-revalidate, proxy-revalidate";
+            }
+
+            proxy_pass http://app/;
+        }
+
+    }
+
+}
