@@ -19,6 +19,7 @@ filebeat.inputs:
 # Below are the input specific configurations.
 
 # filestream is an input for collecting log messages from files.
+# 第一个文件位置
 #- type: filestream
 - type: log
   # Unique ID among all inputs, an ID is required.
@@ -40,6 +41,7 @@ filebeat.inputs:
   fields:
     from: server-6-111
     service: api
+# 第二个文件位置
 - type: log
   id: app-gateway-test
   enabled: true
@@ -172,7 +174,8 @@ output.elasticsearch:
   #api_key: "id:api_key"
   username: "filebeat_user"
   password: "xxxxxxxx"
-  index: "app-test-%{+yyyy.MM.dd}"
+  # 要加-\d+后缀满足生命周期滚动命名规则
+  index: "app-test-%{+yyyy.MM.dd}-000001"
   pipeline: "app_log_pipeline"
 
 # ------------------------------ Logstash Output -------------------------------

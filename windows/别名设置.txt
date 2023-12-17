@@ -1,0 +1,2 @@
+
+别名文件路径： C:\Users\用户名\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
