@@ -17,3 +17,25 @@ head
 
 # 修改
 # /opt/splunk/bin/splunk edit cluster-manager https://old_manager_uri:8089  -manager_uri https://new_manager_uri:8089
+
+
+# 非集群索引和集群索引
+https://docs.splunk.com/Documentation/Splunk/9.1.2/Indexer/Configureindexstorage
+# 配置包捆绑分发
+https://docs.splunk.com/Documentation/Splunk/9.1.2/Indexer/Updatepeerconfigurations
+# manager目录
+/opt/splunk/etc/manager-apps/_cluster/local/
+# peer目录
+/opt/splunk/etc/peer-apps/_cluster/local/
+# 命令方式
+# 检查
+/opt/splunk/bin/splunk validate cluster-bundle
+/opt/splunk/bin/splunk validate cluster-bundle --check-restart
+# 分发
+/opt/splunk/bin/splunk apply cluster-bundle
+# 回滚
+/opt/splunk/bin/splunk rollback cluster-bundle
+# 查看状态
+/opt/splunk/bin/splunk show cluster-bundle-status
+
+
