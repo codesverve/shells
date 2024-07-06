@@ -32,3 +32,7 @@ defaultGroup = group1
 
 
 
+仅发送特定index到indexer节点 etc/system/local/outputs.conf 
+
+
+

@@ -1,0 +1,43 @@
+
+
+https://docs.splunk.com/Documentation/Splunk/9.1.2/Updating/Extendedexampledeployseveralstandardforwarders
+
+https://docs.splunk.com/Documentation/Splunk/9.1.2/Updating/Extendedexampledeployseveralstandardforwarders#Configure_server_classes_with_serverclass.conf
+
+
+
+# deployment client 服务器  /opt/splunk/etc/system/local/deploymentclient.conf
+
+[deployment-client]
+
+[target-broker:deploymentServer]
+targetUri = https://deplyment_server:8089
+
+
+
+# deployment server 服务器 /opt/splunk/etc/system/local/serverclass.conf 
+# 将fwd_to_splunk1和winevt两个app分配给服务器类Fflanda-WIN
+# 将fwd_to_splunk2和linmess两个app分配给服务器类Fflanda-LINUX
+
+[serverClass:indexer-server]
+whitelist.0 = Idx*
+
+
+[serverClass:fwd-server]
+whitelist.0 = Fwd
+whitelist.1 = Head01
+
+
+[serverClass:fwd-server:app:splunk_ta_o365]
+#Enable the app and restart Splunk, after the client receives the app
+stateOnClient = enabled
+restartSplunkd = 1
+restartSplunkWeb = 0
+
+
+
+
+
+# deployment server目录 /opt/splunk/etc/deployment-apps
+
+# deployment client目录 /opt/splunk/etc/apps

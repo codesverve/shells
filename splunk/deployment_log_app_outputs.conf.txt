@@ -1,0 +1,17 @@
+[indexer_discovery: indexer_discovery]
+pass4SymmKey = xxxxxxxx
+manager_uri = https://manager_uri:8089
+
+[tcpout:default_group]
+autoLBFrequency = 30
+forceTimebasedAutoLB = true
+indexerDiscovery = indexer_discovery
+useACK=true
+
+[tcpout]
+forwardedindex.0.whitelist = .*
+forwardedindex.1.blacklist = _.*
+forwardedindex.2.whitelist = (_audit|_internal|_introspection|_telemetry|_metrics|_metrics_rollup|_configtracker)
+forwardedindex.filter.disable = false
+indexAndForward = false
+defaultGroup = default_group

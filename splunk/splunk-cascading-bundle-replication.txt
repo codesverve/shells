@@ -1,0 +1,15 @@
+
+https://docs.splunk.com/Documentation/Splunk/9.1.2/DistSearch/Cascadingknowledgebundlereplication
+
+distsearch.conf
+
+[replicationSettings]
+ 
+replicationPolicy = cascading
+
+
+peer node server.conf
+
+[cascading_replication]
+
+pass4SymmKey = <password> 

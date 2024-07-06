@@ -91,7 +91,11 @@ filebeat.config.modules:
 
 setup:
   ilm:
-    enabled: false
+    enabled: auto
+    rollover_alias: "app-test"
+    pattern: "{now/d}-000001"
+    policy_name: "quarterly-delete"
+    overwrite: true
   template:
     name: "app-test"
     pattern: "app-test-*"
